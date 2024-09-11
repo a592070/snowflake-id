@@ -1,4 +1,4 @@
-package snowflake_id
+package snowflake
 
 import (
 	"fmt"
