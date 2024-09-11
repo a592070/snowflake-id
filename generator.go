@@ -16,8 +16,11 @@ var timestampShift = nodeIdShift + nodeIdBits
 
 type ID int64
 
+// Generator has two fields timeNowFunc and randNumFunc which could accept mock function as inputs for testing.
 type Generator struct {
-	nodeId int64
+	nodeId      int64
+	timeNowFunc func() time.Time
+	randNumFunc func(int64) int64
 }
 
 func NewGenerator(nodeId int64) (*Generator, error) {
@@ -25,21 +28,21 @@ func NewGenerator(nodeId int64) (*Generator, error) {
 		return nil, errors.New(fmt.Sprintf("Invalid node id: nodeId should limit in %d bits", nodeIdBits))
 	}
 	return &Generator{
-		nodeId: nodeId,
+		nodeId:      nodeId,
+		timeNowFunc: time.Now,
+		randNumFunc: rand.Int63n,
 	}, nil
 }
 
 func (g *Generator) NewId() ID {
+	var rs int64
+
 	// timestamp should limit in 41 bits
-	nowMilli := time.Now().UnixMilli() & ((1 << timestampBits) - 1)
+	nowTimestamp := g.timeNowFunc().UnixMilli() & ((1 << timestampBits) - 1)
 	// random number should limit in 12 bits
 	randomLimit := int64(1 << randomIdBits)
-	rnd := rand.Int63n(randomLimit)
-	return g.new(nowMilli, rnd)
-}
+	randomNum := g.randNumFunc(randomLimit)
 
-func (g *Generator) new(nowTimestamp, randomNum int64) ID {
-	var rs int64
 	rs = nowTimestamp << timestampShift
 	rs += g.nodeId << nodeIdShift
 	rs += randomNum
